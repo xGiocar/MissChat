@@ -1,7 +1,10 @@
+import java.io.IOException;
 import java.net.ConnectException;
+import java.util.Scanner;
 
 public class Main {
-    public static void main(String[] args) throws InterruptedException {
+    public static void main(String[] args) throws InterruptedException, IOException {
+
         ClientSocket clientSocket = new ClientSocket();
         try {
             clientSocket.connectToServer("127.0.0.1", 8080);
@@ -12,7 +15,31 @@ public class Main {
 
         System.out.println("Succesfully connected to server");
 
-        clientSocket.sendMessage("Hello world");
+        String string = "";
+
+        Thread serverListener = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (true) {
+                    try {
+                        clientSocket.listenToServer();
+                    } catch (IOException e) {
+                        System.err.println("Can't connect to server");
+                        break;
+                    }
+
+                }
+            }
+        });
+
+        serverListener.start();
+
+        while (string.toLowerCase() != "x") {
+            Scanner scanner = new Scanner(System.in);
+            string = scanner.nextLine();
+            clientSocket.sendMessage(string);
+        }
+
 
         //clientSocket.close();
 

@@ -1,19 +1,17 @@
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.*;
 import java.time.*;
 
 public class ClientSocket implements AutoCloseable {
-    private Socket serverSocket;
     private Socket clientSocket;
     private String username;
+    private BufferedReader inputStream;
+    private PrintWriter outputStream;
 
 
     public ClientSocket() {
         this.username = "guest";
         this.clientSocket = new Socket();
-        this.serverSocket = null;
     }
 
     public ClientSocket(String username) {
@@ -22,24 +20,21 @@ public class ClientSocket implements AutoCloseable {
 
     }
 
-    public void sendMessage(String message) {
-        try {
-            PrintWriter outStream = new PrintWriter(clientSocket.getOutputStream(), true);
-            outStream.println(message);
-
-        } catch (IOException e){
-            System.err.println("The client isn't connected to the server");
-            return;
-        }
-
-
-
+    public void listenToServer() throws IOException{
+        String text = inputStream.readLine();
+        System.out.println(text);
     }
 
-    public void connectToServer(String address, int port) throws ConnectException{
+    public void sendMessage(String message) {
+        outputStream.println(message);
+    }
+
+    public void connectToServer(String address, int port) throws ConnectException {
         SocketAddress serverSock = new InetSocketAddress(address, port);
         try {
             clientSocket.connect(serverSock);
+            this.inputStream = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+            this.outputStream = new PrintWriter(clientSocket.getOutputStream(), true);
             sendMessage("__HEADER__");
             sendMessage(username);
         } catch (IOException e) {

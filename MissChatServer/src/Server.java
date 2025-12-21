@@ -1,29 +1,25 @@
-import java.io.BufferedInputStream;
-import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.net.*;
-import java.sql.Time;
-import java.text.SimpleDateFormat;
-import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeFormatterBuilder;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Server implements AutoCloseable, Runnable {
     public static final int MAX_CLIENTS = 3;
     private final int port;
     private final String address;
     private ServerSocket serverSocket;
-    private Message[] messageHistory;
-    private Client[] clients;
-    private int connectedClients;
+    private List<Message> messageHistory;
+    private List<Client> clients;
+    private int connectedClients = 0;
 
     public Server(String address, int port) {
 
         this.port = port;
         this.address = address;
-        this.messageHistory = new Message[256];
-        this.clients = new Client[MAX_CLIENTS];
+        this.messageHistory = new ArrayList<>();
         this.connectedClients = 0;
+        this.clients = new ArrayList<>();
 
         try {
             InetAddress addr = InetAddress.getByName(this.address);
@@ -36,23 +32,48 @@ public class Server implements AutoCloseable, Runnable {
         }
     }
 
-    public synchronized void waitForClients() {
-        if (connectedClients >= MAX_CLIENTS) {
-            System.err.format("The maximum number of clients connected in a session is %d\n", MAX_CLIENTS);
-            return;
+    private void manageMessage(Message message) throws IOException{
+        System.out.println(message.getTimeStamp() + " " + message.getSender().getUsername() + ": " + message.getBody());
+
+        for (Client client : clients) {
+            if (client != message.getSender()) {
+                client.getOutputStream().println(message.getSender().getUsername() + ": " + message.getBody());
+                //TODO: send message to the other clients
+
+            }
         }
-        try {
-            Socket clientSock = serverSocket.accept();
-            clients[connectedClients] = new Client(clientSock); // saves the socket descriptor for the client that connects to the server
+    }
 
+    public void listenForClients() throws IOException {
+        Socket clientSock = serverSocket.accept();
+        if (clientSock.isConnected()) {
+            Thread clientThread = new Thread(new Runnable() {
+                @Override
+                public void run(){
+                    Client client = new Client(clientSock);
+                    clients.add(client);
+                    System.out.printf("Client connected from address %s on port %d\n", clientSock.getInetAddress(), clientSock.getPort());
+                    Message message;
+                    while(true) {
+                        try {
+                            message = client.readMessage();
+                            if (message != null) {
+                                manageMessage(message);
 
-        } catch (IOException e) {
-            System.err.println(e.toString());
+                            }
+                        } catch (IOException e) {
+                            System.out.println(client.getUsername() + " disconnected");
+                            clients.remove(client);
+                            break;
+                        }
+
+                    }
+
+                }
+            });
+
+            clientThread.start();
         }
-
-        System.out.printf("Client connected from address %s on port %d\n", clients[connectedClients].getClientSocket().getInetAddress(),
-                clients[connectedClients].getClientSocket().getPort());
-        connectedClients++;
     }
 
     public int getPort() {
@@ -69,19 +90,6 @@ public class Server implements AutoCloseable, Runnable {
 
     @Override
     public void close() {
-        for (Client client : clients) {
-            if (client == null) {
-                continue;
-            }
-            try {
-                client.getClientSocket().close();
-            } catch (IOException e) {
-                System.err.println(e.toString());
-            }
-        }
-
-        System.out.println("The clients' sockets were closed successfully");
-
         try {
             serverSocket.close();
         } catch (IOException e) {
@@ -95,47 +103,10 @@ public class Server implements AutoCloseable, Runnable {
 
     }
 
-    public Message readMessage(Client client) {
-        if (client == null) return null;
-        try {
-            String text = client.getInputStream().readLine();
-            if (text == null) return null;
-
-            if (text.equals("__HEADER__")) {
-                text = client.getInputStream().readLine();
-                client.setUsername(text);
-                return null;
-            }
-            String timestamp = LocalTime.now().getHour() + ":" + LocalTime.now().getMinute();
-            Message message = new Message(text, client, timestamp);
-            /*TODO: Add the message to message history*/
-
-            return message;
-
-        } catch (IOException e) {
-            System.err.println(e);
-        }
-
-        return null;
-    }
-
-    public void listenForMessages() {
-        for (Client client : clients) {
-            Message message = readMessage(client);
-            if (message == null) continue;
-            if (message.getBody() != null) {
-                System.out.println(message.getTimeStamp() + " " +
-                        message.getSender().getUsername() + ": " +
-                        message.getBody());
-            }
-        }
-
-    }
-
     @Override
     public void run() {
-        while (this.getConnectedClients() < Server.MAX_CLIENTS) {
-            this.waitForClients();
+        while (this.getConnectedClients() <= Server.MAX_CLIENTS) {
+            //this.listenForClients();
         }
     }
 }
