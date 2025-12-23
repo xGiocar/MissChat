@@ -38,8 +38,6 @@ public class Server implements AutoCloseable, Runnable {
         for (Client client : clients) {
             if (client != message.getSender()) {
                 client.getOutputStream().println(message.getSender().getUsername() + ": " + message.getBody());
-                //TODO: send message to the other clients
-
             }
         }
     }
