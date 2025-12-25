@@ -7,22 +7,26 @@ public class ClientSocket implements AutoCloseable {
     private String username;
     private BufferedReader inputStream;
     private PrintWriter outputStream;
+    private String color; //an integer that represents a color from the list
 
 
     public ClientSocket() {
         this.username = "guest";
+        this.color = "0";
         this.clientSocket = new Socket();
     }
 
-    public ClientSocket(String username) {
+    public ClientSocket(String username, String color) {
         this.username = username;
+        this.color = color;
         this.clientSocket = new Socket();
 
     }
 
-    public void listenToServer() throws IOException{
+    public String listenToServer() throws IOException{
         String text = inputStream.readLine();
         System.out.println(text);
+        return text;
     }
 
     public void sendMessage(String message) {
@@ -37,6 +41,7 @@ public class ClientSocket implements AutoCloseable {
             this.outputStream = new PrintWriter(clientSocket.getOutputStream(), true);
             sendMessage("__HEADER__");
             sendMessage(username);
+            sendMessage(color);
         } catch (IOException e) {
             throw new ConnectException("Server is offline");
         }

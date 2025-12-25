@@ -7,12 +7,14 @@ public class Client {
     private Socket clientSocket;
     private BufferedReader inputStream;
     private PrintWriter outputStream;
+    private int color;
 
     Client() {
         this.username = "";
         this.clientSocket = null;
         this.inputStream = null;
         this.outputStream = null;
+        this.color = 0;
     }
 
     Client(Socket socket) {
@@ -39,10 +41,12 @@ public class Client {
         if (text.equals("__HEADER__")) {
             text = inputStream.readLine();
             username = text;
-            return null;
+            text = inputStream.readLine();
+            color = Integer.parseInt(text);
+            return new Message(username, null, null, 0);
         }
         String timestamp = LocalTime.now().getHour() + ":" + LocalTime.now().getMinute();
-        Message message = new Message(text, this, timestamp);
+        Message message = new Message(text, this, timestamp, color);
         /*TODO: Add the message to message history*/
 
         return message;
@@ -70,5 +74,9 @@ public class Client {
 
     public PrintWriter getOutputStream() {
         return outputStream;
+    }
+
+    public int getColor() {
+        return color;
     }
 }

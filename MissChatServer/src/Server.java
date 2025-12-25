@@ -5,7 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Server implements AutoCloseable, Runnable {
-    public static final int MAX_CLIENTS = 3;
+    public static final int MAX_CLIENTS = 64;
     private final int port;
     private final String address;
     private ServerSocket serverSocket;
@@ -33,11 +33,23 @@ public class Server implements AutoCloseable, Runnable {
     }
 
     private void manageMessage(Message message) throws IOException{
-        System.out.println(message.getTimeStamp() + " " + message.getSender().getUsername() + ": " + message.getBody());
+        if (message.getSender() != null) {
+            System.out.println(message.getTimeStamp() + " " + message.getSender().getUsername() + ": " + message.getBody());
+        }
 
         for (Client client : clients) {
             if (client != message.getSender()) {
-                client.getOutputStream().println(message.getSender().getUsername() + ": " + message.getBody());
+                if (message.getSender() == null && message.getBody() != null)
+                {
+                    if (message.getBody().equals("guest")) {
+                        return;
+                    }
+                    client.getOutputStream().println(message.getBody() + " connected");
+                }
+                else {
+                    client.getOutputStream().println(message.getSender().getColor() + "@" + message.getSender().getUsername() + "@" + message.getBody());
+                }
+
             }
         }
     }
@@ -61,6 +73,11 @@ public class Server implements AutoCloseable, Runnable {
                             }
                         } catch (IOException e) {
                             System.out.println(client.getUsername() + " disconnected");
+                            for (Client disClient : clients) {
+                                if (disClient == client) continue;
+                                disClient.getOutputStream().println(client.getUsername() + " disconnected");
+
+                            }
                             clients.remove(client);
                             break;
                         }

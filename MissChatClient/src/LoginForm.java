@@ -9,9 +9,9 @@ public class LoginForm extends JFrame {
 
     private JPanel panel = new JPanel();
     private FlowLayout layout = new FlowLayout(FlowLayout.CENTER);
-    private JTextField usernameTf = new JTextField(20);
-    private JTextField ipTf = new JTextField(20);
-    private JTextField portTf = new JTextField(20);
+    private JTextField usernameTf = new JTextField("Giocar",20);
+    private JTextField ipTf = new JTextField("127.0.0.1",20);
+    private JTextField portTf = new JTextField("8080",20);
 
     private JButton submitBtn = new JButton("Connect");
     private Label welcomeLbl = new Label("Connect to a server");
@@ -20,10 +20,10 @@ public class LoginForm extends JFrame {
 
     private JLabel errorMsg = new JLabel("");
 
-    ClientSocket clientSocket;
-    String username;
-    String ipAddress;
-    int port;
+    private ClientSocket clientSocket;
+    private String username;
+    private String ipAddress;
+    private int port;
 
     private Image resizeImage(Image icon) {
         return icon.getScaledInstance(300, 300, Image.SCALE_SMOOTH);
@@ -117,9 +117,8 @@ public class LoginForm extends JFrame {
                 }
                 else {
                     try {
-                        clientSocket.connectToServer(ipAddress, port);
-                        removeError();
-                        System.out.println("Succesfully connected to server");
+                        connect(ipAddress, port);
+
                     } catch (ConnectException ex) {
                         writeError("Can't connect to server");
                         System.err.println("The server is offline");
@@ -133,6 +132,14 @@ public class LoginForm extends JFrame {
 
         this.setContentPane(panel);
         this.setVisible(true);
+    }
+
+    public void connect(String ipAddress, int port) throws ConnectException{
+        clientSocket.connectToServer(ipAddress, port);
+        removeError();
+        System.out.println("Succesfully connected to server");
+        MessageForm message = new MessageForm(clientSocket, username, ipAddress, port);
+        this.setVisible(false);
     }
 
     public void writeError(String err) {
